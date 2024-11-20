@@ -13,8 +13,9 @@ jobs:
   release-please:
     runs-on: ubuntu-latest
     steps:
-
-
+      - run: env
+        id: printenv
+        shell: bash
       - uses: actions/create-github-app-token@v1
         id: app-token
         with:
