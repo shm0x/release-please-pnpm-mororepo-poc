@@ -12,7 +12,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@repo/lib": "~0.1.0"
+    "@repo/lib": "~1.0.0"
   },
   "devDependencies": {
     "tsup": "^8.3.5"
