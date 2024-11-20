@@ -12,6 +12,18 @@
 - changing semantic release config ([66ae81b](https://github.com/petra-foundation/lerna-template/commit/66ae81bd8f1c05dee65efebce88828503dbce43e))
 - changing semantic release config ([6d540d5](https://github.com/petra-foundation/lerna-template/commit/6d540d5e5928f37d544cb39c7930f32361422fa2))
 
+## 1.0.0 (2024-11-20)
+
+
+### Bug Fixes
+
+* add base ([48b6c6b](https://github.com/shm0x/release-please-pnpm-mororepo-poc/commit/48b6c6b74f083ec144a4254ea93e0248f11db439))
+* add release please config ([267c65c](https://github.com/shm0x/release-please-pnpm-mororepo-poc/commit/267c65ce955dbc43e5019aed4c1f3d68f0ddbac7))
+* dump env ([584efed](https://github.com/shm0x/release-please-pnpm-mororepo-poc/commit/584efed1d9770a9415567b19d167081713c455b1))
+* dump env ([85f3d65](https://github.com/shm0x/release-please-pnpm-mororepo-poc/commit/85f3d65558d219e9bc3387403c5f3842d1179285))
+* dump env ([47b73e4](https://github.com/shm0x/release-please-pnpm-mororepo-poc/commit/47b73e4f26c0a5d3f4d82dc5f8446350f0db9839))
+* dump env ([21adfb9](https://github.com/shm0x/release-please-pnpm-mororepo-poc/commit/21adfb9e5d3ccf97d8ecd5db58ccdff6c0a74558))
+
 ## [1.2.1](https://github.com/petra-foundation/lerna-template/compare/v1.2.0...v1.2.1) (2023-10-27)
 
 ### Bug Fixes
