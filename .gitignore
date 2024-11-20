@@ -13,7 +13,6 @@ templates/**/node_modules
 coverage
 
 # build
-lib
 storybook-static
 
 # misc
