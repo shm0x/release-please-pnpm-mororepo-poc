@@ -25,6 +25,7 @@
     },
     "packages/svc2": {
       "path": "packages/svc2",
+      "always-link-local": false,
       "release-type": "node"
     }
   }
