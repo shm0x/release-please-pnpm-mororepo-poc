@@ -1,0 +1,69 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "release-type": "node",
+  "draft": false,
+  "prerelease": false,
+  "always-update": true,
+  "last-release-sha": "1c767333230f3805eb84554b3ec370f34e534886",
+  "changelog-path": "CHANGELOG.md",
+  "versioning": "default",
+  "include-v-in-tag": false,
+  "tag-separator": "@",
+  "commit-search-depth": 50,
+  "include-component-in-tag": true,
+  "plugins": ["node-workspace"],
+  "group-pull-request-title-pattern": "chore: release ${branch}",
+  "packages": {
+    "packages/config": {
+      "release-type": "node"
+    },
+    "packages/database": {
+      "release-type": "node"
+    },
+    "packages/fork-synchronizer": {
+      "release-type": "node"
+    },
+    "packages/historical-stats": {
+      "release-type": "node"
+    },
+    "packages/lambda-gateway": {
+      "release-type": "node"
+    },
+    "packages/lambda-market-data": {
+      "release-type": "node"
+    },
+    "packages/lambda-metrics-api": {
+      "release-type": "node"
+    },
+    "packages/lambda-metrics-database-sync": {
+      "release-type": "node"
+    },
+    "packages/lambda-migration": {
+      "release-type": "node"
+    },
+    "packages/lambda-prices-api": {
+      "release-type": "node"
+    },
+    "packages/on-chain-sync": {
+      "release-type": "node"
+    },
+    "packages/oracle-listener-service": {
+      "release-type": "node"
+    },
+    "packages/oracle-prices-client": {
+      "release-type": "node"
+    },
+    "packages/redstone-sdk-wrapper": {
+      "release-type": "node"
+    },
+    "packages/sepolia-eth-faucet": {
+      "release-type": "node"
+    },
+    "packages/sepolia-synchronizer": {
+      "release-type": "node"
+    },
+    "packages/sepolia-token-faucets": {
+      "release-type": "node"
+    }
+  }
+}
