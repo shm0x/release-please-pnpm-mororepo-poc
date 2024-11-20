@@ -13,12 +13,15 @@
   "group-pull-request-title-pattern": "chore: release ${branch}",
   "packages": {
     "packages/lib": {
+      "path": "packages/lib",
       "release-type": "node"
     },
     "packages/svc1": {
+      "path": "packages/svc1",
       "release-type": "node"
     },
     "packages/svc2": {
+      "path": "packages/svc2",
       "release-type": "node"
     }
   }

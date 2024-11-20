@@ -1,6 +1,6 @@
 {
-  "name": "@repo/sv2",
-  "version": "1.0.0",
+  "name": "@repo/svc2",
+  "version": "0.0.1",
   "description": "",
   "main": "index.ts",
   "scripts": {
