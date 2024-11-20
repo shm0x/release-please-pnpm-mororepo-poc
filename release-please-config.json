@@ -10,7 +10,7 @@
   "versioning": "default",
   "include-v-in-tag": false,
   "tag-separator": "@",
-  "always-link-local": false,
+  "always-link-local": true,
   "group-pull-request-title-pattern": "chore: release ${branch}",
   "packages": {
     "packages/lib": {
