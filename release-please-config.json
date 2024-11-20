@@ -15,10 +15,12 @@
   "packages": {
     "packages/lib": {
       "path": "packages/lib",
+      "always-link-local": false,
       "release-type": "node"
     },
     "packages/svc1": {
       "path": "packages/svc1",
+      "always-link-local": false,
       "release-type": "node"
     },
     "packages/svc2": {
