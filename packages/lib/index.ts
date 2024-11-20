@@ -1,3 +1,3 @@
 
 
-export const hello = () => 'Hello rom lib';
+export const hello = () => 'Hello from lib';
