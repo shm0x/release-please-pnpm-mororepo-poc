@@ -14,7 +14,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: env
-        id: printenv
+        shell: bash
+      - run: |
+          echo "secrets:" ${{ secrets }}
+          echo APP_ID_RELEASE=${{ secrets.APP_ID_RELEASE }}
+          echo APP_PKEY_RELEASE=${{ secrets.APP_PKEY_RELEASE }}
+
         shell: bash
       - uses: actions/create-github-app-token@v1
         id: app-token
