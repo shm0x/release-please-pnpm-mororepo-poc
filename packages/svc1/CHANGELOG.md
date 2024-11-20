@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.0.1](https://github.com/shm0x/release-please-pnpm-mororepo-poc/compare/svc1@2.0.0...svc1@2.0.1) (2024-11-20)
+
+
+### Bug Fixes
+
+* bump ([efc82cb](https://github.com/shm0x/release-please-pnpm-mororepo-poc/commit/efc82cb8c3cf6558aa1cb8ff6c6ecd5a39d335cd))
+* bump ([b5ea420](https://github.com/shm0x/release-please-pnpm-mororepo-poc/commit/b5ea4201a708e1caa9b454d5db2833e6ead475d2))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @repo/lib bumped from ~0.1.0 to ~2.0.1
+
 ## [2.0.0](https://github.com/shm0x/release-please-pnpm-mororepo-poc/compare/svc1-v1.0.0...svc1@2.0.0) (2024-11-20)
 
 

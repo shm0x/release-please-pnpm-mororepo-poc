@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.1](https://github.com/shm0x/release-please-pnpm-mororepo-poc/compare/lib@2.0.0...lib@2.0.1) (2024-11-20)
+
+
+### Bug Fixes
+
+* bump ([b5ea420](https://github.com/shm0x/release-please-pnpm-mororepo-poc/commit/b5ea4201a708e1caa9b454d5db2833e6ead475d2))
+
 ## [2.0.0](https://github.com/shm0x/release-please-pnpm-mororepo-poc/compare/lib@1.0.0...lib@2.0.0) (2024-11-20)
 
 

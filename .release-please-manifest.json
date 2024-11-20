@@ -1,5 +1,5 @@
 {
-  "packages/lib": "2.0.0",
-  "packages/svc1": "2.0.0",
+  "packages/lib": "2.0.1",
+  "packages/svc1": "2.0.1",
   "packages/svc2": "2.0.0"
 }
