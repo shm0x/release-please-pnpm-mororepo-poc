@@ -1,0 +1,96 @@
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+  schemas:
+    PriceResponse:
+      type: object
+      properties:
+        PYTH:
+          $ref: '#/components/schemas/Price'
+        REDSTONE:
+          $ref: '#/components/schemas/Price'
+        CHAINLINK:
+          $ref: '#/components/schemas/Price'
+        RATIO:
+          $ref: '#/components/schemas/Ratio'
+        LATEST_ONCHAIN_PYTH_PRICE:
+          type: object
+          properties:
+            timestamp:
+              type: number
+            decimals:
+              type: number
+            price:
+              type: string
+            conf:
+              type: string
+    PriceArray:
+      type: array
+      items:
+        $ref: '#/components/schemas/Price'
+    Price:
+      type: object
+      required:
+        - priceTimestamp
+        - priceValue
+        - decimals
+        - signature
+        - deleteAt
+      properties:
+        priceTimestamp:
+          type: number
+        priceValue:
+          type: string
+        decimals:
+          type: number
+        signature:
+          type: string
+        deleteAt:
+          type: number
+        conf:
+          type: string
+        metadata:
+          type: object
+    Ratio:
+      type: object
+      properties:
+        timestamp:
+          type: number
+        decimals:
+          type: number
+        ratio:
+          type: string
+    FeedId:
+      type: string
+      enum: ['ETHUSD', 'STETHUSD', 'WSTETHUSD']
+    Candle:
+      type: object
+      required:
+        - feedId
+        - decimals
+        - timestamp
+        - open
+        - high
+        - low
+        - close
+      properties:
+        feedId:
+          $ref: '#/components/schemas/FeedId'
+        decimals:
+          type: number
+        timestamp:
+          type: number
+        open:
+          type: string
+        high:
+          type: string
+        low:
+          type: string
+        close:
+          type: string
+
+security:
+  - ApiKeyAuth: []

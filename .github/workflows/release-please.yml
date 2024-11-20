@@ -1,0 +1,31 @@
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+name: release-please
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+
+
+      - uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ secrets.APP_ID_RELEASE }}
+          private-key: ${{ secrets.APP_PKEY_RELEASE }}
+          owner: ${{ github.repository_owner }}
+          repositories: "release-please-pnpm-mororepo-poc"
+
+      - uses: googleapis/release-please-action@v4
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          release-type: simple
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json

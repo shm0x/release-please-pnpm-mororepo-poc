@@ -1,3 +1,8 @@
 {
-  ".": "0.0.0"
+  "packages": {
+    "packages/lib": {
+      "release-type": "node"
+    }
+  },
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json"
 }

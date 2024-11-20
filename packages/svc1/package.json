@@ -1,0 +1,20 @@
+{
+  "name": "@repo/sv1",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.ts",
+  "scripts": {
+    "compile": "pnpm  --package=typescript dlx tsc",
+    "build": "pnpm dlx tsup -- -d dist index.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@repo/lib": "^1.0.0"
+  },
+  "devDependencies": {
+    "tsup": "^8.3.5"
+  }
+}

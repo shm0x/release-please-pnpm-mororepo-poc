@@ -1,0 +1,65 @@
+{
+  "name": "usdn-backend",
+  "version": "2.9.0",
+  "description": "A Monorepo template to start with",
+  "scripts": {
+    "build": "lerna exec -- pnpm run build",
+    "clean": "lerna run clean --parallel",
+    "clean:hard": "pnpm run clean && rm -rf ./packages/**/dist ./packages/**/node_modules ./node_modules && pnpm store prune && pnpm i && pnpm run build",
+    "create-package": "pnpm package-boilerplate ./packages",
+    "create": "pnpm run create-package",
+    "new": "pnpm run create-package",
+    "lint": "lerna run lint",
+    "lint:fix": "lerna run lint:fix",
+    "release": "lerna exec --concurrency 1 -- pnpm --no-install semantic-release -e semantic-release-monorepo",
+    "test": "lerna --ignore @usdn/on-chain-sync run test --parallel"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "17.8.0",
+    "@commitlint/config-conventional": "17.8.0",
+    "@common-ra2/package-boilerplate": "^1.1.0",
+    "@common-ra2/types": "^1.1.1",
+    "@lerna/run": "^6.6.2",
+    "@nestjs/cli": "^10.3.2",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-typescript": "^11.1.5",
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/commit-analyzer": "^9.0.0",
+    "@semantic-release/exec": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/release-notes-generator": "^10.0.0",
+    "@swc/core": "~1.7.36",
+    "@typescript-eslint/eslint-plugin": "^8.14.0",
+    "@typescript-eslint/parser": "^8.14.0",
+    "eslint": "^8.56.0",
+    "eslint-plugin-prettier": "5.0.1",
+    "eslint-plugin-simple-import-sort": "10.0.0",
+    "eslint-plugin-tsdoc": "0.2.17",
+    "husky": "8.0.3",
+    "lerna": "7.4.1",
+    "lint-staged": "^15.0.2",
+    "openapi-typescript-codegen": "^0.28.0",
+    "prettier": "3.0.3",
+    "rimraf": "^5.0.5",
+    "semantic-release": "^22.0.5",
+    "semantic-release-codeartifact": "^2.0.17",
+    "semantic-release-monorepo": "^8.0.2",
+    "typescript": "5.6.3",
+    "unplugin-swc": "^1.5.1",
+    "vitest": "^2.1.3"
+  },
+  "optionalDependencies": {
+    "@esbuild/darwin-arm64": "^0.24.0",
+    "@nx/nx-darwin-arm64": "*",
+    "@nx/nx-linux-x64-gnu": "*",
+    "@rollup/rollup-darwin-arm64": "~4.24.0",
+    "@swc/core-darwin-arm64": "~1.7.39"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "prisma": {
+    "schema": "./packages/database/prisma/schema"
+  },
+  "license": "MIT"
+}

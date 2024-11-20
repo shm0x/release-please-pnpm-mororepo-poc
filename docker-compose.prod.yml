@@ -1,0 +1,185 @@
+x-common-env: &common-env
+  NODE_ENV: '${FORK_NAME:-local}'
+
+x-database-env: &database-env
+  DB_PORT: '${DB_PASSWORD:-5432}'
+  DB_HOST: '${DB_HOST:-database}'
+  DB_USER: '${DB_USER:-postgres}'
+  DB_PASSWORD: '${DB_PASSWORD:-postgres}'
+  DB_NAME: '${DB_NAME:-postgres}'
+  DATABASE_URL: '${DATABASE_URL:-postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@${DB_HOST:-database}:${DB_PORT:-5432}/${DB_NAME:-postgres}}'
+
+x-rpc-env: &rpc-env
+  RPC_URLS: '${RPC_URLS:-http://anvil:8545}'
+  RPC_WS_URLS: '${RPC_WS_URLS:-ws://anvil:8545}'
+
+services:
+  anvil:
+    volumes:
+      - ./anvil-scripts-custom:/anvil-scripts-custom
+      - ./.env.fork:/usr/app/.env.fork
+    container_name: fork-anvil
+    image: 927114455157.dkr.ecr.eu-central-1.amazonaws.com/usdn-backend:smardex-usdn-contracts-0.20.0
+    restart: always
+    networks:
+      - fork-network
+    logging:
+      options:
+        max-size: '20m'
+        max-file: '5'
+    ports:
+      - '${FORK_PORT:-8545}:${FORK_PORT:-8545}'
+    entrypoint:
+      - /bin/sh
+      - /anvil-scripts-custom/entrypoint.sh
+    environment:
+      - FORK_PORT=${FORK_PORT:-8545}
+      - FORK_STORAGE_CACHING=${FORK_STORAGE_CACHING:-false}
+      - FORK_URL=${FORK_URL:-https://eth-mainnet.g.alchemy.com/v2/ZMTGh2wcbFIUDheXaKBN7cFHBfccH-RT}
+      - FORK_CHAIN_ID=${FORK_CHAIN_ID:-31337}
+      - DEPLOY_CONTRACTS=${DEPLOY_CONTRACTS:-true}
+    healthcheck:
+      test: ['CMD-SHELL', 'test "$(stat -c%s /usr/app/.env.fork)" -eq 669']
+      interval: 5s
+      retries: 30
+      start_period: 30s
+
+  on-chain-sync:
+    container_name: on-chain-sync
+    hostname: on-chain-sync
+    restart: always
+    build:
+      context: ./packages/on-chain-sync/
+      target: production
+      dockerfile: ./Dockerfile
+    depends_on:
+      database:
+        condition: service_healthy
+    volumes:
+      - ./.env.fork:/usr/app/.env.fork
+    networks:
+      - fork-network
+    logging:
+      options:
+        max-size: '10m'
+        max-file: '5'
+    environment:
+      <<: [*common-env, *database-env, *rpc-env]
+      CHAIN_ID: '${FORK_CHAIN_ID:-31337}'
+      NETWORK: '${NETWORK:-ethereum}'
+      DEPLOYER_ADDRESS: '${DEPLOYER_ADDRESS:-0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266}'
+      ORACLE_PRICES_API_KEY: '${ORACLE_PRICES_API_KEY:-secret_key}'
+      PRICE_API_URL: '${PRICE_API_URL:-price-api-url}'
+      SNS_TOPIC_ARN: '${SNS_TOPIC_ARN:-arn:aws:sns:eu-central-1:123456789012:changeme}'
+      TESTING_WORKFLOW: '${TESTING_WORKFLOW:-false}'
+      HISTORICAL_METRICS_RPC_URL: '${HISTORICAL_METRICS_RPC_URL:-}'
+      FEED_HISTORICAL_METRICS: '${FEED_HISTORICAL_METRICS:-false}'
+
+  database:
+    container_name: database
+    hostname: database
+    restart: always
+    image: postgres:alpine3.19
+    ports:
+      - '5432:5432'
+    networks:
+      - fork-network
+    logging:
+      options:
+        max-size: '10m'
+        max-file: '5'
+    environment:
+      POSTGRES_PASSWORD: '${DB_PASSWORD:-postgres}'
+      POSTGRES_USER: '${DB_USER:-postgres}'
+      POSTGRES_DB: '${DB_NAME:-postgres}'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-postgres} -p 5432']
+      interval: 10s
+      retries: 5
+      start_period: 30s
+      timeout: 10s
+
+  lambda-gateway:
+    container_name: lambda-gateway
+    build:
+      context: ./packages/lambda-gateway
+      dockerfile: Dockerfile
+      target: production
+    ports:
+      - '3000:3000'
+    depends_on:
+      - lambda-metrics-api
+    logging:
+      options:
+        max-size: '20m'
+        max-file: '5'
+    environment:
+      LAMBDA_URL: 'http://lambda-metrics-api:8080'
+    networks:
+      - fork-network
+    healthcheck:
+      test: curl --fail http://localhost:3000/metrics || exit 1
+      interval: 10s
+      retries: 10
+      start_period: 5s
+      timeout: 10s
+
+  lambda-metrics-api:
+    container_name: lambda-metrics-api
+    build:
+      context: ./packages/lambda-metrics-api
+      dockerfile: Dockerfile
+    ports:
+      - '9000:8080'
+    depends_on:
+      database:
+        condition: service_healthy
+        restart: true
+    logging:
+      options:
+        max-size: '20m'
+        max-file: '5'
+    environment:
+      <<: [*common-env, *database-env]
+    networks:
+      - fork-network
+
+  historical-stats:
+    container_name: historical-stats
+    hostname: historical-stats
+    restart: no
+    depends_on:
+      database:
+        condition: service_healthy
+    build:
+      context: ./packages/historical-stats/
+      target: production
+      dockerfile: ./Dockerfile
+    volumes:
+      - ./.env.fork:/usr/app/.env
+    networks:
+      - fork-network
+    logging:
+      options:
+        max-size: '10m'
+        max-file: '5'
+    environment:
+      <<: [*common-env, *database-env]
+      DB_LOGGING: 'false'
+      PURGE_STATISTICS: 'false'
+
+  adminer:
+    container_name: adminer
+    image: adminer:4.8.1
+    ports:
+      - '8080:8080'
+    networks:
+      - fork-network
+    environment:
+      ADMINER_DEFAULT_DB_HOST: '${DB_HOST:-database}'
+      ADMINER_DEFAULT_DB_NAME: '${DB_NAME:-postgres}'
+
+networks:
+  fork-network:
+    driver: bridge
+    name: fork-network
