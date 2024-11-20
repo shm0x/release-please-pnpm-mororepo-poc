@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.1.0](https://github.com/shm0x/release-please-pnpm-mororepo-poc/compare/svc2@0.0.2...svc2@0.1.0) (2024-11-20)
+
+
+### ⚠ BREAKING CHANGES
+
+* update message
+
+### Features
+
+* update message ([bf07771](https://github.com/shm0x/release-please-pnpm-mororepo-poc/commit/bf07771baa9be3c554eae3b992b43bcb67808224))
+
 ## [0.0.2](https://github.com/shm0x/release-please-pnpm-mororepo-poc/compare/svc2-v0.0.1...svc2@0.0.2) (2024-11-20)
 
 
