@@ -1,3 +1,3 @@
 
 
-export const hello = () => 'Hello world from lib';
+export const hello = () => 'Hello  from lib';
