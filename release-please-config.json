@@ -10,8 +10,15 @@
   "versioning": "default",
   "include-v-in-tag": false,
   "tag-separator": "@",
+  "group-pull-request-title-pattern": "chore: release ${branch}",
   "packages": {
     "packages/lib": {
+      "release-type": "node"
+    },
+    "packages/svc1": {
+      "release-type": "node"
+    },
+    "packages/svc2": {
       "release-type": "node"
     }
   }
