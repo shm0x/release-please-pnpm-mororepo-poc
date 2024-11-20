@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.0.3](https://github.com/shm0x/release-please-pnpm-mororepo-poc/compare/svc1@0.0.2...svc1@0.0.3) (2024-11-20)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @repo/lib bumped from ^0.0.2 to ^0.0.3
+
 ## [0.0.2](https://github.com/shm0x/release-please-pnpm-mororepo-poc/compare/svc1-v0.0.1...svc1@0.0.2) (2024-11-20)
 
 
