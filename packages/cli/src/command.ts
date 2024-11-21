@@ -1,4 +1,5 @@
 import { execSync, spawnSync } from 'child_process';
+import fs from 'fs';
 export abstract class Command {
   mappings: Record<string, string> = {};
   options: Record<string, { description: string; type: string; multiple?: boolean }> = {};
@@ -74,6 +75,10 @@ export abstract class Command {
 
   async exec(command: string) {
     return execSync(command);
+  }
+
+  readJson(path: string) {
+    return JSON.parse(fs.readFileSync(path, 'utf-8'));
   }
 }
 
