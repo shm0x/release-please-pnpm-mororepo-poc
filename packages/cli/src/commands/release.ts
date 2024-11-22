@@ -1,16 +1,39 @@
+import chalk from 'chalk';
+
 import { Command } from '../command';
+export type Commit = {
+  hash: string;
+  timestamp: Date;
+  message: string;
+  type: string;
+  scope: string;
+  isBreakingChange: boolean;
+  files: string[];
+};
+
+export type Bump = {
+  name: string;
+  root: string;
+  type: 'major' | 'minor' | 'patch';
+  major: boolean;
+  minor: boolean;
+  patch: boolean;
+  current: string;
+  new: string;
+  commits: Commit[];
+  json: Record<string, any>;
+  depsToBump: Record<string, string>;
+};
+
+export type Context = {
+  commits: Commit[];
+  changelog: string;
+  bumps: Record<string, Bump>;
+};
 
 export class ReleaseCommand extends Command {
   static description = 'Prepare a new release';
   options = {
-    help: {
-      description: 'Show this help message',
-      type: 'boolean',
-    },
-    verbose: {
-      description: 'Enable debug mode',
-      type: 'boolean',
-    },
     from: {
       description: 'Start commit',
       type: 'string',
@@ -20,15 +43,149 @@ export class ReleaseCommand extends Command {
       type: 'string',
     },
   };
-  mappings = {
-    h: 'help',
-    v: 'verbose',
+  mappings = {};
+
+  state: Context = {
+    commits: [],
+    bumps: {},
+    changelog: '',
   };
   async execute(inputs: string[]) {
     const { command, flags, args } = this.formatInputs(inputs);
-    const stdout = (await this.exec(`git log --format='%H %ct %s' ${flags.from}..${flags.to}`)).toString();
-    const commits = await Promise.all(
-      stdout
+    // command is not used here, we can mute it
+    console.log('Preparing release...');
+    await this.parseCommitLog(
+      await this.getCommitLogs({
+        from: String(flags.from),
+        to: String(flags.to),
+      }),
+    );
+    console.log(`Analyzing ${chalk.green(this.state.commits.length)} commits...`);
+    await this.checkBumps();
+    this.generateChangelog();
+  }
+
+  computeBumps(packages: string[]) {
+    packages.forEach((pkg) => {
+      if (this.state.bumps[pkg]) return;
+      const commits = this.state.commits.filter((commit) => commit.files.some((file) => file.startsWith(pkg)));
+      console.log(`Found ${commits.length} commits for ${pkg}`);
+      const isMajor = commits.some((commit) => commit.isBreakingChange);
+      const isMinor = commits.some((commit) => commit.type === 'feat');
+      const isPatch = commits.some((commit) => commit.type === 'fix');
+      const type = isMajor ? 'major' : isMinor ? 'minor' : 'patch';
+      const json = this.readJson(`${pkg}/package.json`);
+      this.state.bumps[pkg] = {
+        root: pkg.split('/')[0],
+        name: json.name,
+        type: type,
+        major: isMajor,
+        minor: isMinor,
+        patch: isPatch,
+        current: json.version,
+        new: this.computeNewVersion(json.version, type),
+        commits,
+        json,
+        depsToBump: {},
+      };
+
+      console.log(
+        `${this.state.bumps[pkg].json.name}: bumping from ${chalk.bold(
+          chalk.blue(this.state.bumps[pkg].current),
+        )} to ${this.formatVersion(this.state.bumps[pkg].new, this.state.bumps[pkg].type)} [${chalk.bold(
+          chalk[
+            this.state.bumps[pkg].type === 'major' ? 'red' : this.state.bumps[pkg].type === 'minor' ? 'green' : 'yellow'
+          ](this.state.bumps[pkg].type),
+        )}]\n`,
+      );
+    });
+  }
+
+  checkDependencies() {
+    const packagesKeys = Object.keys(this.state.bumps);
+    const packagesNames = packagesKeys.map((pkg) => this.state.bumps[pkg].name);
+    packagesKeys.forEach((pkg) => {
+      console.log(`${this.state.bumps[pkg].name}: checking dependencies...`);
+      const pkgDeps = this.state.bumps[pkg].json.dependencies || {};
+      const shouldBump = Object.keys(pkgDeps).filter((dep) => packagesNames.includes(dep));
+      if (!shouldBump.length) return;
+      shouldBump.forEach((dep) => {
+        const depPkg = packagesKeys.find((key) => this.state.bumps[key].name === dep);
+        if (!depPkg) return;
+        const range = pkgDeps[dep];
+        if (!/^[\^~]/.test(range as string)) {
+          console.log(`${this.state.bumps[pkg].name}: skipping ${dep} ${range}`);
+          return;
+        }
+        if (String(range).startsWith('~') && this.state.bumps[depPkg].patch) {
+          this.state.bumps[pkg].depsToBump[dep] = `~${this.state.bumps[depPkg].new}`;
+          console.log(
+            `${this.state.bumps[pkg].name}: bumping ${chalk.green(dep)} from ${chalk.bold(
+              chalk.blue(range),
+            )} to ~${this.formatVersion(this.state.bumps[depPkg].new, this.state.bumps[depPkg].type)}`,
+          );
+        }
+        if (String(range).startsWith('^') && (this.state.bumps[depPkg].minor || this.state.bumps[depPkg].patch)) {
+          this.state.bumps[pkg].depsToBump[dep] = `^${this.state.bumps[depPkg].new}`;
+          console.log(
+            `${this.state.bumps[pkg].name}: bumping ${chalk.green(dep)} from ${chalk.bold(
+              chalk.blue(range),
+            )} to ^${this.formatVersion(this.state.bumps[depPkg].new, this.state.bumps[depPkg].type)}`,
+          );
+        }
+      });
+    });
+  }
+
+  computeNewVersion(version: string, type: 'major' | 'minor' | 'patch') {
+    const current = version.split('.').map(Number);
+    if (type === 'major') {
+      current[0]++;
+      current[1] = 0;
+      current[2] = 0;
+    }
+    if (type === 'minor') {
+      current[1]++;
+      current[2] = 0;
+    }
+    if (type === 'patch') {
+      current[2]++;
+    }
+    return current.join('.');
+  }
+
+  async checkBumps() {
+    const scanDirectories = this.config('release.scan');
+    if (!scanDirectories) {
+      console.log('No scan directory configured in ra2.config.json, in release.scan path');
+      return;
+    }
+    console.log(`Scanning for changes in paths:`);
+    console.log(scanDirectories.map((dir: string) => `- ${chalk.green(dir.replace(/\/$/, '') + '/*')}`).join('\n'));
+    const files = this.state.commits.flatMap((commit) => commit.files);
+    const scanFiles = files.filter((file) => {
+      // scanDirectories is like ["packages", "apps"]
+      // if one of the scanDirectories is in the file path, we include it
+      if (scanDirectories.some((dir: string) => file.startsWith(dir))) {
+        return true;
+      }
+      return false;
+    });
+    console.log(`${scanFiles.length} files changed...`);
+
+    // unique list of packages
+    const packages = scanFiles
+      .map((file) => [file.split('/')[0], file.split('/')[1]])
+      .map((pkg) => pkg.join('/'))
+      .filter((value, index, self) => self.indexOf(value) === index);
+    console.log(`${packages.length} packages changed...`);
+    this.computeBumps(packages);
+    this.checkDependencies();
+  }
+
+  async parseCommitLog(log: string): Promise<Commit[]> {
+    this.state.commits = await Promise.all(
+      log
         .split('\n')
         .filter((x) => x)
         .map(async (line) => {
@@ -52,147 +209,78 @@ export class ReleaseCommand extends Command {
           };
         }),
     );
-
-    const bumps = {};
-    for (const commit of commits) {
-      for (const file of commit.files) {
-        const pkg = file.split('/')[1];
-        if (!pkg) continue;
-        if (!bumps[pkg]) {
-          const json = this.readJson(`packages/${pkg}/package.json`);
-          bumps[pkg] = {
-            major: false,
-            minor: false,
-            patch: false,
-            current: json.version,
-            commits: [],
-            json,
-          };
-        }
-        if (!bumps[pkg].commits.includes(commit)) {
-          bumps[pkg].commits.push(commit);
-        }
-        if (commit.isBreakingChange) {
-          bumps[pkg].major = true;
-          bumps[pkg].minor = false;
-          bumps[pkg].patch = false;
-          continue;
-        }
-        if (commit.type === 'feat' && !bumps[pkg].major) {
-          bumps[pkg].minor = true;
-          bumps[pkg].patch = false;
-          continue;
-        }
-        if (commit.type === 'fix' && !bumps[pkg].major && !bumps[pkg].minor) {
-          bumps[pkg].patch = true;
-          continue;
-        }
-      }
-    }
-
-    const packages = Object.values(bumps).map((pkg) => pkg.json.name);
-    console.log(`Found changes in packages: ${packages.join(', ')}`);
-
-    // For each package, compute the new version based on the bump type
-    for (const [pkg, bump] of Object.entries(bumps)) {
-      const version = bump.json.version.split('.').map(Number);
-      if (bump.major) {
-        version[0]++;
-        version[1] = 0;
-        version[2] = 0;
-      } else if (bump.minor) {
-        version[1]++;
-        version[2] = 0;
-      } else if (bump.patch) {
-        version[2]++;
-      }
-      bump.new = version.join('.');
-      bump.depsToBump = {};
-      // now, for each internal dependency that was bumped, we need to update the version in the package.json
-      // For example, if the config packages was update, and app depends on it, we need to check the @usdn/config version in app's package.json
-      // and check if semver allow bump
-      for (const [dep, range] of Object.entries(bump.json.dependencies || {})) {
-        console.log(dep, range);
-
-        if (packages.includes(dep)) {
-          console.log('Found internal dependency', dep);
-          const depPkg = dep.split('/')[1];
-          if (bumps[depPkg]) {
-            // If the range dont start with ^ or ~, we dont update it
-            if (!/^[\^~]/.test(range)) {
-              continue;
-            }
-            // if tilde, we only allow update the patch
-            if (range.startsWith('~') && bumps[depPkg].patch) {
-              bump.depsToBump[dep] = `~${bumps[depPkg].new}`;
-            }
-            if (range.startsWith('^') && (bumps[depPkg].minor || bumps[depPkg].patch)) {
-              // if caret, we allow update the minor and patch
-              bump.depsToBump[dep] = `^${bumps[depPkg].new}`;
-            }
-          }
-        }
-      }
-    }
-
-    const PRContent = this.generatePRContent(bumps);
-    console.log(PRContent);
+    return this.state.commits;
   }
 
-  generatePRContent(bumps) {
-    //<details><summary>config: 5.1.0</summary>
+  async getCommitLogs(flags: { from: string; to: string }) {
+    return (await this.exec(`git log --format='%H %ct %s' ${flags.from}..${flags.to}`)).toString();
+  }
 
-    //## [5.1.0](https://github.com/Backend-RA2-Tech/usdn-backend/compare/config-v5.0.1...config@5.1.0) (2024-11-19)
-
-    //### Features
-
-    //* apply suggestions ([6666db2](https://github.com/Backend-RA2-Tech/usdn-backend/commit/6666db24b3acac95211df744ea02266f5ab164ab))
-
-    //### Bug Fixes
-
-    //* bump all packages patch ([eee5f07](https://github.com/Backend-RA2-Tech/usdn-backend/commit/eee5f0717d42af01a0963ad5874c591c703eaf0f))
-    //* trigger bump versions ([be6d18f](https://github.com/Backend-RA2-Tech/usdn-backend/commit/be6d18f620b47c951ad4653c53f5690e62853352))
-
-    //### Dependencies
-
-    //* The following workspace dependencies were updated
-    //  * dependencies
-    //    * @usdn/config bumped from ~5.0.0 to ~5.1.0
-    //    * @usdn/oracle-prices-client bumped from ~2.0.0 to ~2.0.1
-    //</details>
-    let content = '';
-    const [year, month, day] = new Date().toISOString().split('T')[0].split('-');
-    console.log(bumps);
-    for (const [pkg, bump] of Object.entries(bumps)) {
-      content += `<details><summary>${pkg}: ${bump.new}</summary>\n\n`;
-      content += `## [${bump.new}](https://github.com/Backend-RA2-Tech/usdn-backend/compare/${pkg}-v${bump.current}...${pkg}@${bump.new}) (${year}-${month}-${day})\n\n`;
-
-      const featCommits = bump.commits.filter((commit) => commit.type === 'feat');
-
-      if (featCommits.length) {
-        content += '### Features\n\n';
-        for (const commit of featCommits) {
-          content += `* ${commit.message} ([${commit.hash.substr(
-            0,
-            7,
-          )}](https://github.com/Backend-RA2-Tech/usdn-backend/commit/${commit.hash}))\n`;
-        }
-      }
-      const fixCommits = bump.commits.filter((commit) => commit.type === 'fix');
-
-      if (fixCommits.length) {
-        content += '### Bug Fixes\n\n';
-        for (const commit of fixCommits) {
-          content += `* ${commit.message} ([${commit.hash.substr(
-            0,
-            7,
-          )}](https://github.com/Backend-RA2-Tech/usdn-backend/commit/${commit.hash}))\n`;
-        }
-      }
-
-      content += '</details>\n\n';
+  formatVersion(version: string, bump: 'major' | 'minor' | 'patch') {
+    const [major, minor, patch] = version.split('.').map(Number);
+    if (bump === 'major') {
+      return chalk.bold(`${chalk.red(`${major}`)}.${chalk.green(`0`)}.${chalk.yellow(`0`)}`);
+    } else if (bump === 'minor') {
+      return chalk.bold(`${major}.${chalk.green(`${minor}`)}.${chalk.yellow(`0`)}`);
+    } else {
+      return chalk.bold(`${major}.${minor}.${chalk.yellow(`${patch}`)}`);
     }
-    return content;
+  }
+
+  generateChangelog() {
+    const config = {
+      ...{
+        labels: ['autorelease: pending'],
+        title: 'chore: release ${version}',
+        header: ':robot: I have created a release *beep* *boop*',
+        fix: '### Bug Fixes',
+        feat: '### Features',
+        docs: '### Documentation',
+        dependencies: '### Dependencies',
+        other: '### Other Changes',
+      },
+      ...this.config('release.pullRequest'),
+    };
+    this.state.changelog = `${config.header}
+---
+`;
+    const [year, month, day] = new Date().toISOString().split('T')[0].split('-');
+    for (const [pkg, bump] of Object.entries(this.state.bumps)) {
+      this.state.changelog += `<details><summary>${pkg}: ${bump.new}</summary>\n\n`;
+      this.state.changelog += `## [${bump.new}](https://github.com/${this.config(
+        'release.repository',
+      )}/compare/${pkg}-v${bump.current}...${pkg}@${bump.new}) (${year}-${month}-${day})\n\n`;
+
+      const commits = {
+        feat: bump.commits.filter((commit) => commit.type === 'feat'),
+        fix: bump.commits.filter((commit) => commit.type === 'fix'),
+        docs: bump.commits.filter((commit) => commit.type === 'docs'),
+        other: bump.commits.filter((commit) => !['feat', 'fix', 'docs'].includes(commit.type)),
+      };
+      Object.keys(commits).forEach((key: string) => {
+        if (commits[key as keyof typeof commits].length) {
+          this.state.changelog += `${config[key as keyof typeof config]}\n\n`;
+          for (const commit of commits[key as keyof typeof commits]) {
+            this.state.changelog += `* ${commit.message} ([${commit.hash.slice(0, 7)}](https://github.com/${this.config(
+              'release.repository',
+            )}/commit/${commit.hash}))\n`;
+          }
+          this.state.changelog += '\n';
+        }
+      });
+
+      if (Object.keys(bump.depsToBump).length) {
+        this.state.changelog += '### Dependencies\n\n';
+        this.state.changelog += '* The following workspace dependencies were updated\n';
+        for (const [dep, range] of Object.entries(bump.depsToBump)) {
+          this.state.changelog += `    * ${dep} bumped from ${bump.json.dependencies[dep]} to ${range}\n`;
+        }
+      }
+
+      this.state.changelog += '</details>\n\n';
+    }
+    console.log(this.state.changelog);
+    return this.state.changelog;
   }
 }
 

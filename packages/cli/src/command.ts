@@ -1,4 +1,4 @@
-import { execSync, spawnSync } from 'child_process';
+import { execSync } from 'child_process';
 import fs from 'fs';
 export abstract class Command {
   mappings: Record<string, string> = {};
@@ -79,6 +79,21 @@ export abstract class Command {
 
   readJson(path: string) {
     return JSON.parse(fs.readFileSync(path, 'utf-8'));
+  }
+
+  private _config: Record<string, any> | undefined;
+
+  config(key: string) {
+    if (!this._config) {
+      if (!fs.existsSync('ra2.config.json')) {
+        return;
+      }
+      this._config = this.readJson('ra2.config.json');
+      if (!this._config) {
+        return;
+      }
+    }
+    return key.split('.').reduce((acc, k) => acc[k], this._config);
   }
 }
 
