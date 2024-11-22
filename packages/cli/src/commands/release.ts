@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import defu from 'defu';
 
 import { Command } from '../command';
 export type Commit = {
@@ -13,6 +14,7 @@ export type Commit = {
 
 export type Bump = {
   name: string;
+  changelog: string;
   root: string;
   type: 'major' | 'minor' | 'patch';
   major: boolean;
@@ -42,27 +44,56 @@ export class ReleaseCommand extends Command {
       description: 'End commit',
       type: 'string',
     },
+    debug: {
+      description: 'Enable debug mode',
+      type: 'boolean',
+    },
   };
-  mappings = {};
+  mappings = {
+    d: 'debug',
+  };
 
   state: Context = {
     commits: [],
     bumps: {},
     changelog: '',
   };
+  defaultConfig = {
+    labels: ['autorelease: pending'],
+    title: 'chore: release ${version}',
+    header: ':robot: I have created a release *beep* *boop*',
+    fix: '### Bug Fixes',
+    feat: '### Features',
+    docs: '### Documentation',
+    test: '### Tests',
+    chore: '### Chore',
+    dependencies: '### Dependencies',
+    other: '### Other Changes',
+  };
+  commandConfig: Record<string, any> = {};
   async execute(inputs: string[]) {
-    const { command, flags, args } = this.formatInputs(inputs);
-    // command is not used here, we can mute it
-    console.log('Preparing release...');
+    this.commandConfig = this.mergeConfig(this.defaultConfig, 'release.pullRequest');
+    console.log('Preparing release...', this.commandConfig);
+    const parsed = this.parseInputs(inputs);
     await this.parseCommitLog(
       await this.getCommitLogs({
-        from: String(flags.from),
-        to: String(flags.to),
+        from: String(parsed.flags.from),
+        to: String(parsed.flags.to),
       }),
     );
     console.log(`Analyzing ${chalk.green(this.state.commits.length)} commits...`);
     await this.checkBumps();
     this.generateChangelog();
+    console.log(this.state.changelog);
+    console.log(this.state.bumps);
+  }
+
+  async createPR() {
+    await this.exec(
+      `gh pr create --title "chore: release ${this.state.bumps[Object.keys(this.state.bumps)[0]].new}" --body "${
+        this.state.changelog
+      }"`,
+    );
   }
 
   computeBumps(packages: string[]) {
@@ -78,6 +109,7 @@ export class ReleaseCommand extends Command {
       this.state.bumps[pkg] = {
         root: pkg.split('/')[0],
         name: json.name,
+        changelog: '',
         type: type,
         major: isMajor,
         minor: isMinor,
@@ -155,7 +187,7 @@ export class ReleaseCommand extends Command {
   }
 
   async checkBumps() {
-    const scanDirectories = this.config('release.scan');
+    const scanDirectories = this.commandConfig.scan;
     if (!scanDirectories) {
       console.log('No scan directory configured in ra2.config.json, in release.scan path');
       return;
@@ -228,28 +260,14 @@ export class ReleaseCommand extends Command {
   }
 
   generateChangelog() {
-    const config = {
-      ...{
-        labels: ['autorelease: pending'],
-        title: 'chore: release ${version}',
-        header: ':robot: I have created a release *beep* *boop*',
-        fix: '### Bug Fixes',
-        feat: '### Features',
-        docs: '### Documentation',
-        dependencies: '### Dependencies',
-        other: '### Other Changes',
-      },
-      ...this.config('release.pullRequest'),
-    };
-    this.state.changelog = `${config.header}
+    this.state.changelog = `${this.commandConfig.pullRequest.header}
 ---
 `;
     const [year, month, day] = new Date().toISOString().split('T')[0].split('-');
     for (const [pkg, bump] of Object.entries(this.state.bumps)) {
-      this.state.changelog += `<details><summary>${pkg}: ${bump.new}</summary>\n\n`;
-      this.state.changelog += `## [${bump.new}](https://github.com/${this.config(
-        'release.repository',
-      )}/compare/${pkg}-v${bump.current}...${pkg}@${bump.new}) (${year}-${month}-${day})\n\n`;
+      bump.changelog = '';
+      bump.changelog += `<details><summary>${pkg}: ${bump.new}</summary>\n\n`;
+      bump.changelog += `## [${bump.new}](https://github.com/${this.commandConfig.repository}/compare/${pkg}-v${bump.current}...${pkg}@${bump.new}) (${year}-${month}-${day})\n\n`;
 
       const commits = {
         feat: bump.commits.filter((commit) => commit.type === 'feat'),
@@ -259,27 +277,27 @@ export class ReleaseCommand extends Command {
       };
       Object.keys(commits).forEach((key: string) => {
         if (commits[key as keyof typeof commits].length) {
-          this.state.changelog += `${config[key as keyof typeof config]}\n\n`;
+          bump.changelog += `${this.commandConfig.pullRequest[key as keyof typeof this.commandConfig.pullRequest]}\n\n`;
           for (const commit of commits[key as keyof typeof commits]) {
-            this.state.changelog += `* ${commit.message} ([${commit.hash.slice(0, 7)}](https://github.com/${this.config(
-              'release.repository',
-            )}/commit/${commit.hash}))\n`;
+            bump.changelog += `* ${commit.message} ([${commit.hash.slice(0, 7)}](https://github.com/${
+              this.commandConfig.repository
+            }/commit/${commit.hash}))\n`;
           }
-          this.state.changelog += '\n';
+          bump.changelog += '\n';
         }
       });
 
       if (Object.keys(bump.depsToBump).length) {
-        this.state.changelog += `${config.dependencies}\n\n`;
-        this.state.changelog += '* The following workspace dependencies were updated\n';
+        bump.changelog += `${this.commandConfig.pullRequest.dependencies}\n\n`;
+        bump.changelog += '* The following workspace dependencies were updated\n';
         for (const [dep, range] of Object.entries(bump.depsToBump)) {
-          this.state.changelog += `    * ${dep} bumped from ${bump.json.dependencies[dep]} to ${range}\n`;
+          bump.changelog += `    * ${dep} bumped from ${bump.json.dependencies[dep]} to ${range}\n`;
         }
       }
 
-      this.state.changelog += '</details>\n\n';
+      bump.changelog += '</details>\n\n';
+      this.state.changelog += bump.changelog;
     }
-    console.log(this.state.changelog);
     return this.state.changelog;
   }
 }

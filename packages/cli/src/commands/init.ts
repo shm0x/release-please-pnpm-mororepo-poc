@@ -1,7 +1,7 @@
 import { Command } from '../command';
 
 export class InitCommand extends Command {
-  static description = 'Configure USDN stack';
+  static description = 'Configure USDN stack on your machine';
   options = {
     help: {
       description: 'Show this help message',
@@ -17,7 +17,7 @@ export class InitCommand extends Command {
     v: 'verbose',
   };
   async execute(inputs: string[]) {
-    const { command, flags, args } = this.formatInputs(inputs);
+    const { command, flags, args } = this.parseInputs(inputs);
   }
 }
 

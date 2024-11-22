@@ -1,9 +1,11 @@
 import { execSync } from 'child_process';
+import defu from 'defu';
 import fs from 'fs';
 export abstract class Command {
   mappings: Record<string, string> = {};
   options: Record<string, { description: string; type: string; multiple?: boolean }> = {};
   abstract execute(inputs: string[]): Promise<void> | void;
+  constructor(protected _config: Record<string, any> | undefined = {}) {}
   getMappedOption(opt: string) {
     return this.mappings[opt] || opt;
   }
@@ -30,7 +32,11 @@ export abstract class Command {
     return { name, value, shift };
   }
 
-  formatInputs(inputs: string[], stopCommand = false): Inputs {
+  padBetween(left: string, right: string, padding = 30) {
+    return left.padEnd(padding, ' ') + right.trim();
+  }
+
+  parseInputs(inputs: string[], stopCommand = false): Inputs {
     let command = undefined;
     const args: string[] = [];
     const flags: Record<string, [boolean | string]> = {};
@@ -81,19 +87,21 @@ export abstract class Command {
     return JSON.parse(fs.readFileSync(path, 'utf-8'));
   }
 
-  private _config: Record<string, any> | undefined;
-
   config(key: string) {
-    if (!this._config) {
-      if (!fs.existsSync('ra2.config.json')) {
-        return;
+    // use dot notation to access nested properties
+    return key.split('.').reduce((acc, k) => acc[k], this._config || {});
+  }
+
+  mergeConfig(config: Record<string, any>, key: string) {
+    const final = defu(config, this.config(key));
+    return key.split('.').reduce((acc, k, i, arr) => {
+      if (i === arr.length - 1) {
+        acc[k] = final;
+        return acc;
       }
-      this._config = this.readJson('ra2.config.json');
-      if (!this._config) {
-        return;
-      }
-    }
-    return key.split('.').reduce((acc, k) => acc[k], this._config);
+      acc[k] = acc[k] || {};
+      return acc[k];
+    }, this._config || {});
   }
 }
 
