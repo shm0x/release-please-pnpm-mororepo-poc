@@ -55,11 +55,11 @@
     "@rollup/rollup-darwin-arm64": "~4.24.0",
     "@swc/core-darwin-arm64": "~1.7.39"
   },
-  "workspaces": [
-    "packages/*"
-  ],
   "prisma": {
     "schema": "./packages/database/prisma/schema"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "defu": "^6.1.4"
+  }
 }

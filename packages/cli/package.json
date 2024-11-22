@@ -1,0 +1,31 @@
+{
+  "name": "@usdn/cli",
+  "type": "module",
+  "version": "0.1.0",
+  "module": "src/index.ts",
+  "bin": {
+    "usdn": "src/start.sh"
+  },
+  "description": "The common config for USDN",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "build": "pnpm tsup src/index.ts --format cjs --format esm --dts --clean --sourcemap"
+  },
+  "keywords": [],
+  "author": "RA2 TECH SA",
+  "license": "UNLICENSED",
+  "namespace": "@usdn",
+  "dockerize": false,
+  "publishToCodeArtifact": true,
+  "dependencies": {
+    "chalk": "^5.3.0"
+  }
+}
