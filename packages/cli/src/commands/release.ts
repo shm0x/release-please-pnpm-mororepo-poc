@@ -270,7 +270,7 @@ export class ReleaseCommand extends Command {
       });
 
       if (Object.keys(bump.depsToBump).length) {
-        this.state.changelog += '### Dependencies\n\n';
+        this.state.changelog += `${config.dependencies}\n\n`;
         this.state.changelog += '* The following workspace dependencies were updated\n';
         for (const [dep, range] of Object.entries(bump.depsToBump)) {
           this.state.changelog += `    * ${dep} bumped from ${bump.json.dependencies[dep]} to ${range}\n`;
